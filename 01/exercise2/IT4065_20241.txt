@@ -1,0 +1,6 @@
+SubjectID|IT4065
+Subject|Network Programming
+Weights|Progress: 30.00 | Final: 70.00
+Semester|20241
+StudentCount|1
+Student|20210343|NGUYEN THI|THU|Progress: 9.0|Final: 5.5|Grade: C
