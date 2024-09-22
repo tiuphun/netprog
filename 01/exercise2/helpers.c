@@ -60,6 +60,7 @@ int askToContinue(const char* message) {
 }
 
 Subject* findSubject(const char* subjectID, const char* semesterID) {
+    // First, check the linked list for the subject
     Subject* temp = subjectList;
     while (temp != NULL) {
         if (strcmp(temp->subjectID, subjectID) == 0 && strcmp(temp->semesterID, semesterID) == 0) {
@@ -67,7 +68,45 @@ Subject* findSubject(const char* subjectID, const char* semesterID) {
         }
         temp = temp->next;
     }
-    return NULL;
+
+    // If not found in the linked list, check for the file
+    char filename[50];
+    sprintf(filename, "%s_%s.txt", subjectID, semesterID);
+    
+    FILE* file = fopen(filename, "r");
+    if (file != NULL) {
+        Subject* newSubject = (Subject*)malloc(sizeof(Subject));
+        newSubject->studentList = NULL; // Initialize the student list
+        newSubject->studentCount = 0;
+
+        char line[256];
+        while (fgets(line, sizeof(line), file)) {
+            if (strncmp(line, "SubjectID|", 10) == 0) {
+                sscanf(line + 10, "%s", newSubject->subjectID);
+            } else if (strncmp(line, "Subject|", 8) == 0) {
+                sscanf(line + 8, "%[^\n]", newSubject->subjectName);
+            } else if (strncmp(line, "Weights|", 8) == 0) {
+                sscanf(line + 8, "Progress: %f | Final: %f", &newSubject->progressWeight, &newSubject->finalWeight);
+            } else if (strncmp(line, "Semester|", 9) == 0) {
+                sscanf(line + 9, "%s", newSubject->semesterID);
+            } else if (strncmp(line, "StudentCount|", 13) == 0) {
+                sscanf(line + 13, "%d", &newSubject->studentCount);
+            } else if (strncmp(line, "Student|", 8) == 0) {
+                Student* newStudent = (Student*)malloc(sizeof(Student));
+                sscanf(line + 8, "%[^|]|%[^|]|%[^|]|Progress: %f|Final: %f|Grade: %c",
+                       newStudent->id, newStudent->firstName, newStudent->lastName,
+                       &newStudent->progressMark, &newStudent->finalMark, &newStudent->grade);
+                newStudent->next = newSubject->studentList; // Insert at the head of the list
+                newSubject->studentList = newStudent;
+            }
+        }
+        fclose(file);
+        printf("Subject loaded from file %s.\n", filename);
+        return newSubject; // Return the newly created subject
+    } else {
+        printf("Subject not found!\n");
+    }
+    return NULL; // Return NULL if subject is not found in list or file
 }
 
 void writeSubjectToFile(Subject* subject) {

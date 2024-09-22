@@ -2,5 +2,7 @@ SubjectID|IT4065
 Subject|Network Programming
 Weights|Progress: 30.00 | Final: 70.00
 Semester|20241
-StudentCount|1
+StudentCount|3
+Student|20210692|NGUYEN TIEU|PHUONG|Progress: 10.0|Final: 9.0|Grade: A
 Student|20210343|NGUYEN THI|THU|Progress: 9.0|Final: 5.5|Grade: C
+Student|20223234|NGUY HAI|AN|Progress: 8.3|Final: 9.2|Grade: A
