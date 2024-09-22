@@ -172,19 +172,64 @@ void createScoreReport(Subject* subject) {
         return;
     }
 
-    fprintf(file, "SubjectID|%s\n", subject->subjectID);
-    fprintf(file, "Subject|%s\n", subject->subjectName);
-    fprintf(file, "Weights|Progress: %.2f | Final: %.2f\n", subject->progressWeight, subject->finalWeight);
-    fprintf(file, "Semester|%s\n", subject->semesterID);
-    fprintf(file, "StudentCount|%d\n", subject->studentCount);
-
+    // Initialize variables for report
     Student* temp = subject->studentList;
+    float totalMarks = 0.0;
+    int studentCount = 0;
+    float highestMark = -1.0;
+    float lowestMark = 11.0;
+    char highestName[MAX_NAME_LEN] = "";
+    char lowestName[MAX_NAME_LEN] = "";
+    
+    int gradeA = 0, gradeB = 0, gradeC = 0, gradeD = 0, gradeF = 0;
+
     while (temp != NULL) {
-        temp->grade = calculateGrade(temp->progressMark, temp->finalMark, subject->progressWeight, subject->finalWeight);
-        fprintf(file, "Student|%s|%s|%s|Progress: %.1f|Final: %.1f|Grade: %c\n",
-                temp->id, temp->firstName, temp->lastName, temp->progressMark, temp->finalMark, temp->grade);
+        float totalMark = (temp->progressMark * subject->progressWeight + temp->finalMark * subject->finalWeight) / 100.0;
+        totalMarks += totalMark;
+        studentCount++;
+
+        if (totalMark > highestMark) {
+            highestMark = totalMark;
+            strncpy(highestName, temp->firstName, sizeof(highestName));
+            strncat(highestName, " ", sizeof(highestName) - strlen(highestName) - 1);
+            strncat(highestName, temp->lastName, sizeof(highestName) - strlen(highestName) - 1);
+        }
+        if (totalMark < lowestMark) {
+            lowestMark = totalMark;
+            strncpy(lowestName, temp->firstName, sizeof(lowestName));
+            strncat(lowestName, " ", sizeof(lowestName) - strlen(lowestName) - 1);
+            strncat(lowestName, temp->lastName, sizeof(lowestName) - strlen(lowestName) - 1);
+        }
+
+        char grade = calculateGrade(temp->progressMark, temp->finalMark, subject->progressWeight, subject->finalWeight);
+        switch (grade) {
+            case 'A': gradeA++; break;
+            case 'B': gradeB++; break;
+            case 'C': gradeC++; break;
+            case 'D': gradeD++; break;
+            case 'F': gradeF++; break;
+        }
+
         temp = temp->next;
     }
+
+    float averageMark = (studentCount > 0) ? (totalMarks / studentCount) : 0.0;
+
+    fprintf(file, "\nThe student with the highest mark is: %s\n", highestName);
+    fprintf(file, "The student with the lowest mark is: %s\n", lowestName);
+    fprintf(file, "The average mark is: %.2f\n\n", averageMark);
+    fprintf(file, "A histogram of the subject %s is:\n", subject->subjectID);
+    fprintf(file, "A:");
+    for (int i = 0; i < gradeA; i++) fprintf(file, "*");
+    fprintf(file, "\nB:");
+    for (int i = 0; i < gradeB; i++) fprintf(file, "*");
+    fprintf(file, "\nC:");
+    for (int i = 0; i < gradeC; i++) fprintf(file, "*");
+    fprintf(file, "\nD:");
+    for (int i = 0; i < gradeD; i++) fprintf(file, "*");
+    fprintf(file, "\nF:");
+    for (int i = 0; i < gradeF; i++) fprintf(file, "*");
+    fprintf(file, "\n");
 
     fclose(file);
     printf("Score report created for subject %s (Semester %s) and saved to file %s.\n", subject->subjectID, subject->semesterID, filename);
@@ -199,76 +244,10 @@ void displayScoreReport(Subject* subject) {
         printf("Error: Could not open file %s\n", filename);
         return;
     }
-    
     char line[256];
-    int studentCount = 0;
-    char highestName[MAX_NAME_LEN] = "";
-    char lowestName[MAX_NAME_LEN] = "";
-    float highestMark = 0.0, lowestMark = 10.0; // 10 is the max mark
-    float totalMarks = 0.0;
-    
-    int gradeA = 0, gradeB = 0, gradeC = 0, gradeD = 0, gradeF = 0;
-    
     while (fgets(line, sizeof(line), file)) {
-        if (line[0] == 'S') {  // Student line
-            char studentID[10], firstName[MAX_NAME_LEN], lastName[MAX_NAME_LEN];
-            float progressMark, finalMark;
-            char grade;
-            
-            sscanf(line, "Student|%[^|]|%[^|]|%[^|]|Progress: %f|Final: %f|Grade: %c\n", 
-                   studentID, firstName, lastName, &progressMark, &finalMark, &grade);
-            
-            // Combine first and last name
-            char fullName[MAX_NAME_LEN];
-            snprintf(fullName, sizeof(fullName), "%s %s", firstName, lastName);
-            
-            // Calculate total mark based on the two marks
-            float totalMark = (progressMark + finalMark) / 2.0;
-            totalMarks += totalMark;
-            studentCount++;
-            
-            // Check for highest and lowest marks
-            if (totalMark > highestMark) {
-                highestMark = totalMark;
-                strncpy(highestName, fullName, sizeof(highestName));
-            }
-            if (totalMark < lowestMark) {
-                lowestMark = totalMark;
-                strncpy(lowestName, fullName, sizeof(lowestName));
-            }
-            
-            // Count grades for histogram
-            switch (grade) {
-                case 'A': gradeA++; break;
-                case 'B': gradeB++; break;
-                case 'C': gradeC++; break;
-                case 'D': gradeD++; break;
-                case 'F': gradeF++; break;
-            }
-        }
+        printf("%s", line);
     }
     
     fclose(file);
-    
-    // Calculate the average mark
-    float averageMark = totalMarks / studentCount;
-    
-    // Display the report
-    printf("The student with the highest mark is: %s\n", highestName);
-    printf("The student with the lowest mark is: %s\n", lowestName);
-    printf("The average mark is: %.2f\n", averageMark);
-    
-    // Display histogram of grades
-    printf("\nA histogram of the subject %s is:\n", subject->subjectID);
-    printf("A:");
-    for (int i = 0; i < gradeA; i++) printf("*");
-    printf("\nB:");
-    for (int i = 0; i < gradeB; i++) printf("*");
-    printf("\nC:");
-    for (int i = 0; i < gradeC; i++) printf("*");
-    printf("\nD:");
-    for (int i = 0; i < gradeD; i++) printf("*");
-    printf("\nF:");
-    for (int i = 0; i < gradeF; i++) printf("*");
-    printf("\n");
 }

@@ -1,0 +1,11 @@
+
+The student with the highest mark is: NGUYEN TIEU PHUONG
+The student with the lowest mark is: NGUYEN THI THU
+The average mark is: 8.26
+
+A histogram of the subject IT4065 is:
+A:**
+B:
+C:*
+D:
+F:
