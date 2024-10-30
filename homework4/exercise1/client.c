@@ -1,52 +1,63 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <arpa/inet.h>
 #include <unistd.h>
+#include <arpa/inet.h>
 
 #define BUFFER_SIZE 1024
 
 int main(int argc, char *argv[]) {
     if (argc != 3) {
-        fprintf(stderr, "Usage: %s <IPAdress> <PortNumber>\n", argv[0]);
+        fprintf(stderr, "Usage: %s <IP_Address> <Port_Number>\n", argv[0]);
         exit(EXIT_FAILURE);
     }
 
     int sock = 0;
-    struct sockaddr_in server_addr;
-    char buffer[BUFFER_SIZE] = {0};
+    struct sockaddr_in serv_addr;
+    char buffer[BUFFER_SIZE];
 
     char *ip_address = argv[1];
     int port = atoi(argv[2]);
 
+    // Step 1: Create socket
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-        perror("socket creation failed");
+        perror("Socket creation error");
         exit(EXIT_FAILURE);
     }
 
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_port = htons(port);
+    // Step 2: Set up the server address struct
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(port);
 
-    if (inet_pton(AF_INET, ip_address, &server_addr.sin_addr) <= 0) {
-        perror("Invalid IP address");
-        close(sock);
+    if (inet_pton(AF_INET, ip_address, &serv_addr.sin_addr) <= 0) {
+        perror("Invalid address or address not supported");
         exit(EXIT_FAILURE);
     }
 
-    if (connect(sock, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
-        perror("connection failed");
+    // Step 3: Connect to the server
+    if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
+        perror("Connection Failed");
         exit(EXIT_FAILURE);
     }
 
-    printf("Enter a string: ");
-    fgets(buffer, BUFFER_SIZE, stdin);
-    buffer[strcspn(buffer, "\n")] = 0;  // Remove newline character
+    while (1) {
+        printf("Enter a string to send to the server (or a blank string to quit): ");
+        fgets(buffer, BUFFER_SIZE, stdin);
+        buffer[strcspn(buffer, "\n")] = 0; // Remove newline character
 
-    send(sock, buffer, strlen(buffer), 0);
-    printf("Message sent\n");
+        // Send the string to the server
+        send(sock, buffer, strlen(buffer), 0);
 
-    int valread = read(sock, buffer, BUFFER_SIZE);
-    printf("Received: %s\n", buffer);
+        if (strlen(buffer) == 0) {
+            printf("Blank string entered. Exiting.\n");
+            break;
+        }
+
+        // Receive response from the server
+        int valread = read(sock, buffer, BUFFER_SIZE);
+        buffer[valread] = '\0'; // Null-terminate the received string
+        printf("Received from server:\n%s\n", buffer);
+    }
 
     close(sock);
     return 0;
