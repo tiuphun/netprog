@@ -3,26 +3,59 @@
 #include <string.h>
 #include <ctype.h>
 #include <unistd.h>
+#include <pthread.h>
 #include <arpa/inet.h>
 
 #define PORT 5500
 #define BUFFER_SIZE 1024
 
+// Function to capitalize a string
 void capitalize(char *str) {
     for (int i = 0; str[i]; i++) {
         str[i] = toupper(str[i]);
     }
 }
 
+// Thread function to handle each client
+void *handle_client(void *client_socket) {
+    int sock = *(int *)client_socket;
+    char buffer[BUFFER_SIZE];
+    free(client_socket);
+
+    while (1) {
+        int valread = read(sock, buffer, BUFFER_SIZE);
+        if (valread < 0) {
+            perror("Read failed");
+            break;
+        }
+
+        buffer[valread] = '\0'; // Null-terminate the received string
+
+        if (strcmp(buffer, "q") == 0 || strcmp(buffer, "Q") == 0) {
+            printf("Client requested to close the connection.\n");
+            break;
+        }
+
+        capitalize(buffer);
+        if (send(sock, buffer, strlen(buffer), 0) < 0) {
+            perror("Send failed");
+            break;
+        }
+    }
+
+    close(sock);
+    printf("Client disconnected.\n");
+    return NULL;
+}
+
 int main() {
-    int server_fd, new_socket;
+    int server_fd;
     struct sockaddr_in address;
     int addrlen = sizeof(address);
-    char buffer[BUFFER_SIZE] = {0};
 
     // Creating socket file descriptor
     if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
-        perror("socket failed");
+        perror("Socket failed");
         exit(EXIT_FAILURE);
     }
 
@@ -33,46 +66,42 @@ int main() {
 
     // Binding the socket to the specified IP and port
     if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0) {
-        perror("bind failed");
+        perror("Bind failed");
         close(server_fd);
         exit(EXIT_FAILURE);
     }
 
     // Listening for incoming connections
-    if (listen(server_fd, 3) < 0) {
-        perror("listen failed");
+    if (listen(server_fd, 10) < 0) { // Set backlog to 10
+        perror("Listen failed");
         close(server_fd);
         exit(EXIT_FAILURE);
     }
 
     printf("Server is listening on 127.0.0.1:%d\n", PORT);
 
-    // Accepting a new connection
-    if ((new_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t*)&addrlen)) < 0) {
-        perror("accept failed");
-        close(server_fd);
-        exit(EXIT_FAILURE);
-    }
-
     while (1) {
-        int valread = read(new_socket, buffer, BUFFER_SIZE);
-        if (valread < 0) {
-            perror("read failed");
-            break;
+        int *new_socket = malloc(sizeof(int)); // Allocate memory for client socket
+        if ((*new_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t *)&addrlen)) < 0) {
+            perror("Accept failed");
+            free(new_socket);
+            continue;
         }
 
-        buffer[valread] = '\0';
+        printf("New client connected.\n");
 
-        if (strcmp(buffer, "q") == 0 || strcmp(buffer, "Q") == 0) {
-            printf("Received 'q' or 'Q'. Closing connection.\n");
-            break;
+        // Create a thread for each client
+        pthread_t thread_id;
+        if (pthread_create(&thread_id, NULL, handle_client, new_socket) != 0) {
+            perror("Thread creation failed");
+            free(new_socket);
+            continue;
         }
 
-        capitalize(buffer);
-        send(new_socket, buffer, strlen(buffer), 0);
+        // Detach the thread so resources are freed after it terminates
+        pthread_detach(thread_id);
     }
 
-    close(new_socket);
     close(server_fd);
     return 0;
 }

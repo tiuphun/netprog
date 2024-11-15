@@ -7,6 +7,13 @@
 #define BUFFER_SIZE 1024
 
 void error_handling(char *message);
+void trim_newline(char *str) {
+    size_t len = strlen(str);
+    if (len > 0 && str[len - 1] == '\n') {
+        str[len - 1] = '\0';
+    }
+}
+
 
 int main(int argc, char *argv[]) {
     int sock;
@@ -34,11 +41,14 @@ int main(int argc, char *argv[]) {
     while (1) {
         printf("Enter UserID: ");
         fgets(message, BUFFER_SIZE, stdin);
+        trim_newline(message);
         write(sock, message, strlen(message));
 
         printf("Enter Password: ");
         fgets(message, BUFFER_SIZE, stdin);
+        trim_newline(message);
         write(sock, message, strlen(message));
+
 
         str_len = read(sock, message, BUFFER_SIZE - 1);
         if (str_len == -1)
