@@ -14,7 +14,6 @@ void trim_newline(char *str) {
     }
 }
 
-
 int main(int argc, char *argv[]) {
     int sock;
     struct sockaddr_in serv_addr;
@@ -42,13 +41,14 @@ int main(int argc, char *argv[]) {
         printf("Enter UserID: ");
         fgets(message, BUFFER_SIZE, stdin);
         trim_newline(message);
+        // printf("%s", message);
         write(sock, message, strlen(message));
 
         printf("Enter Password: ");
         fgets(message, BUFFER_SIZE, stdin);
         trim_newline(message);
+        // printf("%s", message);
         write(sock, message, strlen(message));
-
 
         str_len = read(sock, message, BUFFER_SIZE - 1);
         if (str_len == -1)
@@ -57,22 +57,20 @@ int main(int argc, char *argv[]) {
         message[str_len] = 0;
         printf("Message from server: %s\n", message);
 
-        if (strcmp(message, "Login successful\n") == 0) {
-            break;
-        } else if (strcmp(message, "Account locked\n") == 0) {
-            close(sock);
-            exit(1);
-        }
+        // if (strcmp(message, "Login successful\n") == 0) {
+        //     break; // Exit after successful login
+        // } else if (strcmp(message, "Account locked\n") == 0) {
+        //     close(sock);
+        //     exit(1);
+        // }
+        break;
     }
-
-    // Additional code for sign-out or other functionalities can be added here
 
     close(sock);
     return 0;
 }
 
 void error_handling(char *message) {
-    fputs(message, stderr);
-    fputc('\n', stderr);
+    perror(message);
     exit(1);
 }
